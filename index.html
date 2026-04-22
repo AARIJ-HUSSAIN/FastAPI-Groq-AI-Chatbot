@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Chatbot</title>
+
+<!-- Markdown parser -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+}
+
+/* FULL SCREEN */
+.chat-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* HEADER */
+.header {
+    padding: 15px;
+    background: #111827;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* CHAT AREA */
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+/* USER MESSAGE */
+.user {
+    text-align: right;
+    margin: 10px;
+    color: #60a5fa;
+}
+
+/* BOT MESSAGE */
+.bot {
+    text-align: left;
+    margin: 10px;
+    background: #1f2937;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+/* INPUT AREA */
+.input-box {
+    display: flex;
+    padding: 10px;
+    background: #111827;
+    gap: 10px;
+}
+
+input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+}
+
+button {
+    padding: 12px 18px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* typing indicator */
+.typing {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-left: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="chat-wrapper">
+
+    <div class="header">
+        🤖 AI Chatbot (Memory Enabled)
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="typing" id="typing"></div>
+
+    <div class="input-box">
+        <input id="input" placeholder="Type your message..." />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+</div>
+
+<script>
+
+/* =========================
+   CHAT MEMORY (LOCAL STORAGE)
+   ========================= */
+let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
+
+function saveChat() {
+    localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+}
+
+/* =========================
+   LOAD OLD CHAT ON START
+   ========================= */
+window.onload = function () {
+    let messagesDiv = document.getElementById("messages");
+
+    chatHistory.forEach(msg => {
+        if (msg.role === "user") {
+            messagesDiv.innerHTML += `<div class="user">You: ${msg.content}</div>`;
+        } else {
+            let formatted = marked.parse(msg.content);
+            messagesDiv.innerHTML += `<div class="bot">🤖 ${formatted}</div>`;
+        }
+    });
+
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+};
+
+/* =========================
+   SEND MESSAGE FUNCTION
+   ========================= */
+async function sendMessage() {
+
+    let input = document.getElementById("input");
+    let message = input.value;
+
+    if (!message.trim()) return;
+
+    let messagesDiv = document.getElementById("messages");
+    let typing = document.getElementById("typing");
+
+    // show user message
+    messagesDiv.innerHTML += `<div class="user">You: ${message}</div>`;
+
+    // store user message
+    chatHistory.push({ role: "user", content: message });
+    saveChat();
+
+    input.value = "";
+
+    typing.innerText = "AI is thinking...";
+
+    try {
+        let response = await fetch(
+            `http://127.0.0.1:8000/chat?message=${encodeURIComponent(message)}`
+        );
+
+        let data = await response.json();
+
+        // store AI response
+        chatHistory.push({ role: "assistant", content: data.response });
+        saveChat();
+
+        // markdown rendering
+        let formatted = marked.parse(data.response);
+
+        messagesDiv.innerHTML += `<div class="bot">🤖 ${formatted}</div>`;
+    }
+    catch (error) {
+        messagesDiv.innerHTML += `<div class="bot">Error: ${error}</div>`;
+    }
+
+    typing.innerText = "";
+
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+</script>
+
+</body>
+</html>

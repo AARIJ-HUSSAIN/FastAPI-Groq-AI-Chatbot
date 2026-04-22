@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🧠 MEMORY STORE (simple in RAM)
+#  MEMORY STORE (simple in RAM)
 chat_history = []
 
 @app.get("/chat")
